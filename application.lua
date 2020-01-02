@@ -36,8 +36,8 @@ READING_INTERVAL = math.ceil(((MAXIMUM_DISTANCE * 2 / 340 * 1000) + TRIG_INTERVA
 AVG_READINGS = 3
 -- CONTINUOUS MEASURING
 CONTINUOUS = true
--- interval between scheduling continous reading; 30 minutes
-CONTINUOUS_INTERVAL = 30 * 60 * 1000
+-- interval between scheduling continous reading; 1 minute
+CONTINUOUS_INTERVAL = 1 * 60 * 1000
 
 -- notify to MQTT
 PUBLISH = true
@@ -113,6 +113,15 @@ function publish()
 	mqtt_client.publish(tostring(distance))
 end
 
+-- callback for MQTT commands
+function mqtt_command(message)
+	print("Received: " .. message)
+	if message == "update" then
+		print("Forcing update")
+		measure()
+	end
+end
+
 -- echo callback function called on both rising and falling edges
 function echo_callback(level, timestamp)
 	print("Callback at LVL="..level.." with T="..timestamp)
@@ -163,7 +172,8 @@ end
 if PUBLISH then
 	dofile("mqtt.lua")
 	-- MQTT host, port, user and password should be defined in the `credentials.lua`; see init.lua
-	mqtt_client = MqttClient(MQTT_HOST, MQTT_PORT, MQTT_USER, MQTT_PASSWORD, MQTT_TOPIC, MQTT_CLIENTID)
+	mqtt_client = MqttClient(MQTT_HOST, MQTT_PORT, MQTT_USER, MQTT_PASSWORD, MQTT_TOPIC, MQTT_CLIENTID, mqtt_command)
+	mqtt_client.connect()
 end
 
 print("Setup finished")

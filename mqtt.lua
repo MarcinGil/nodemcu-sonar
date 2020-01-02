@@ -10,7 +10,7 @@
 -- keep alive timer in seconds
 KEEP_ALIVE = 180
 
-function MqttClient(host, port, user, password, topic, clientId)
+function MqttClient(host, port, user, password, topic, clientId, cmd_callback)
     local self = {}
 
     -- private fields
@@ -18,18 +18,51 @@ function MqttClient(host, port, user, password, topic, clientId)
     local p = port
     local t = topic
     local connected = false
+    local callback = cmd_callback
+    local m = nil
 
-    -- setup MQTT client
-    print("MQTT setup for topic="..t.." clientid="..clientId.." at "..h..":"..p)
-    local m = mqtt.Client(clientId, KEEP_ALIVE, user, password)
-    m:on("connect", function(client)
+    local function self_register()
+        if callback == nil then
+            return
+        end
+
+        if not m:subscribe(clientId, 0, function(conn)
+            print("MQTT subscribe successful")
+        end) then
+            print("MQTT unable to subscribe")
+        end
+    end
+
+    local function on_connected(client)
         connected = true
         print ("MQTT Connected")
-    end)
-    m:on("offline", function(client)
+
+        self_register()
+    end
+
+    local function on_disconnected(client, reason)
         connected = false
         print ("MQTT Offline")
-    end)
+        tmr.create():alarm(10 * 1000, tmr.ALARM_SINGLE, self.connect)
+    end
+
+    local function on_message(client, topic, message)
+        if callback ~= nil then
+            callback(message)
+        end
+    end
+
+    -- setup MQTT client
+
+    print("MQTT setup for topic="..t.." clientid="..clientId.." at "..h..":"..p)
+    m = mqtt.Client(clientId, KEEP_ALIVE, user, password)
+    m:on("connect", on_connected)
+    m:on("offline", on_disconnected)
+    m:on("message", on_message)
+
+    function self.connect()
+        m:connect(h, p, false)
+    end
 
     function self.publish(message)
         -- print("MQTT publishing -"..message.."@"..t)
@@ -55,10 +88,10 @@ function MqttClient(host, port, user, password, topic, clientId)
             end
         end
 
-        if not m:close() then
-            connected = false
-            print ("MQTT unable to close connection")
-        end
+        -- if not m:close() then
+        --     connected = false
+        --     print ("MQTT unable to close connection")
+        -- end
     end
 
     return self
