@@ -1,0 +1,65 @@
+= NodeMCU (ESP8266) / HC-SR04 with MQTT support
+Marcin Gil <marcin.gil@gmail.com>
+v0.2, January 2020: Initial documentation
+
+:toc:
+
+== Introduction
+
+Hello!
+This application was written with the purpose of measuring the coal level in my furnace storage and publish it
+over MQTT to my OpenHab installation. The hardware used in the excellent ESP8266 with a distance sensor HC-SR04.
+
+=== Features
+
+Even though the code is small it has several useful features:
+
+* HC-SR04 measurement, both single and continuous (timer based)
+* Wifi connection
+* MQTT connection with auto-reconnect
+* Subscribes to own channel for command inception
+
+== Setup
+
+Besides uploading all `*.lua` code files you need to create manually one more file, namely `credentials.lua`.
+It should contain the connection details to both your WiFi and MQTT broker.
+
+.credentials.lua contents:
+SSID:: The SSID of your WiFi network
+PASSWORD:: WiFi password
+MQTT_HOST:: Host address of the MQTT broker
+MQTT_PORT:: Port of the MQTT broker
+MQTT_USER:: Username to access the broker
+MQTT_PASSWORD:: Password for MQTT user
+
+=== HC-SR04 connection
+
+In my setup the HC-SR04 is connected to pins D3 and D4 on the board (echo and trigger respectively) -> see `application.lua` `PIN_TRIG` and `PIN_ECHO`.
+
+Ground and VCC are connected to GND and VTA. Be aware that sometimes if you have too weak power source the board might not boot up with sensor connected.
+
+This happened for me when debugging, I had to first disconnect sensor, reset board, then upload files, restart again and connect sensor live. But when used with phone charger (5V - 2A) everything worked flawlessly.
+
+=== MQTT
+
+Connection to MQTT broker (I use Mosquitto) is initialized manually but after that it is automatically reconnected. Also the connection is first established upon first published message.
+
+By default the channel is named `coal` and the client id is `coalo`. The MQTT client also establishes a subscription to a command channel named after client id (`coalo` here) -- but only if a callback function is given.
+
+== Usage
+
+Simply upload all the `*.lua` files to the board and restart. Upon successful WiFi connection the MQTT broker connection should be initialized and first measurement started.
+
+Result is always made as an average of 3 consecutive measurements. Even with this results can be sometimes way off - I think this is due to sensor limitations.
+
+When you give a callback function to MqttClient (see `application.lua`) it then subscribes to a _command_ channel named after client id (`coalo` by default).
+
+If you publish something to that channel it will be picked up and processed. Currently the only recognized _command_ is `update`. It forces an immediate measurement. So even if you have set up a continuous work but the delay is high, you can enforce an update.
+
+For example:
+----
+mosquitto_pub -h mqtt_host -p mqtt_port -u mqtt_user -P mqtt_password -t coalo -m "update"
+----
+
+Hope you find this useful.
+Thanks!
