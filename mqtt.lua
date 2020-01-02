@@ -37,7 +37,7 @@ function MqttClient(host, port, user, password, topic, clientId)
             print("MQTT connecting...")
             -- connect and mark connection established
             -- publish upon connection
-            m:connect(h, p, 0, function(client)
+            m:connect(h, p, false, function(client)
                 connected = true
                 client:publish(t, message, 0, 0, function(client)
                     print ("MQTT message sent")

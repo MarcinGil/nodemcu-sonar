@@ -10,11 +10,23 @@
 -- Derived work from Vinícius Serafim <vinicius@serafim.eti.br>
 -- see: https://github.com/vsserafim/hcsr04-nodemcu/blob/master/hcsr04-simple.lua
 
+-- This application requires several modules of NodeMCU firmware
+	-- encoder
+	-- file
+	-- gpio
+	-- mqtt
+	-- net
+	-- node
+	-- tmr
+	-- uart
+	-- wifi
+
+-- It also requires an LFS (Lua File Storage) of at least 32KB
 PIN_TRIG = 4
 PIN_ECHO = 3
 
 
--- trig interval in microseconds (minimun is 10, see HC-SR04 documentation)
+-- trig interval in microseconds (minimum is 10, see HC-SR04 documentation)
 TRIG_INTERVAL = 15
 -- maximum distance in meters
 MAXIMUM_DISTANCE = 10
@@ -24,12 +36,12 @@ READING_INTERVAL = math.ceil(((MAXIMUM_DISTANCE * 2 / 340 * 1000) + TRIG_INTERVA
 AVG_READINGS = 3
 -- CONTINUOUS MEASURING
 CONTINUOUS = true
--- interval between scheduling continous reading; 30 seconds
-CONTINUOUS_INTERVAL = 30 * 1000
+-- interval between scheduling continous reading; 30 minutes
+CONTINUOUS_INTERVAL = 30 * 60 * 1000
 
 -- notify to MQTT
 PUBLISH = true
-MQTT_TOPIC = "/coal"
+MQTT_TOPIC = "coal"
 MQTT_CLIENTID = "coalo"
 
 -- initialize global variables
@@ -142,6 +154,7 @@ gpio.trig(PIN_ECHO, "both", echo_callback)
 
 -- configure CONTINUOUS timers
 if CONTINUOUS then
+	print("Create continuous trigger")
 	cont_timer = tmr.create()
 	cont_timer:register(CONTINUOUS_INTERVAL, tmr.ALARM_SEMI, measure)
 end
@@ -154,3 +167,6 @@ if PUBLISH then
 end
 
 print("Setup finished")
+
+print("Initializing first measure")
+measure()
